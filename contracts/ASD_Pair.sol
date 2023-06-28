@@ -137,9 +137,9 @@ contract ASD_SwapPair {
         poolAmount[_token] -= amount;
     }
 
-    function _swap(address _tokenA, uint256 amountA, address _tokenB, uint256 amountB, address sender) private returns(uint256 swapAmount){
+    function swap(address _tokenA, uint256 amountA, address _tokenB, uint256 amountB, address sender) private returns(uint256 swapAmount){
         otherPrice = new TokenPriceOracle().routing(IERC(_tokenB).symbol());
-        uint256 swapAmount = otherPrice / priceASD;
+        uint256 swapAmount = otherPrice * fee / 100 / priceASD;
         IERC swap = IERC20(tokenB);
         getTokenFromSender(_tokenA, amountA, sender);
         swap._transfer(_tokenB, sender, swapAmount);
@@ -147,3 +147,8 @@ contract ASD_SwapPair {
     }
 
 }
+
+/*
+swap - 계산식 수정
+
+*/
