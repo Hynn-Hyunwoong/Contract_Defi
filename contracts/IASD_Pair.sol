@@ -16,5 +16,5 @@ interface IASD_SwapPair {
     function initialize(address _tokenA, address _tokenB) external;
     function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) external payable;
     function removeLiquidity(address from) external;
-    function swap(address _token, uint256 amountIn, address sender) external returns (uint256);
+    function swap(address swap, address swaped, uint256 amountIn, address sender) external returns (uint256);
 }

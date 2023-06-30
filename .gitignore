@@ -4,7 +4,7 @@ coverage
 coverage.json
 typechain
 typechain-types
-*.md
+ERROR.md
 # Hardhat files
 cache
 artifacts

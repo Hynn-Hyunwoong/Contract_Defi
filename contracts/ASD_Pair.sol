@@ -149,26 +149,16 @@ contract ASD_SwapPair is IASD_SwapPair{
         poolAmount[_token] -= amount;
     }
 
-    function swap(address _token, uint256 amountIn, address sender) public override returns(uint256 swapedAmount){
-        address swapToken;
-        address swapedToken;
-        if(_token == tokenA) {
-            swapToken = tokenA;
-            swapedToken = tokenB;
-        }else {
-            swapToken = tokenB;
-            swapedToken = tokenA;    
-        }
-
+    function swap(address _swap, address _swaped, uint256 amountIn, address sender) public override returns(uint256 swapedAmount){
         uint256 swapFee = amountIn * _fee;
         uint256 swapAmount = amountIn - swapFee;
-        getTokenFromSender(_token, amountIn, sender);
-        _transfer(_token, factory, swapFee);
-        tokens[swapToken] += swapAmount;
-        swapedAmount = K / tokens[swapToken];
+        getTokenFromSender(_swap, amountIn, sender);
+        _transfer(_swap, factory, swapFee);
+        tokens[_swaped] += swapAmount;
+        swapedAmount = K / tokens[_swaped];
         
-        _transfer(swapedToken, sender, swapedAmount);
-        feeKeepingtoFactory(_token, swapFee);
+        _transfer(_swaped, sender, swapedAmount);
+        feeKeepingtoFactory(_swap, swapFee);
          
         // emit Swap(sender, amountIn, swapedAmount);
     }
