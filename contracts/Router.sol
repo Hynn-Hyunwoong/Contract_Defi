@@ -9,7 +9,7 @@ import "./ASD_Pair.sol";
 contract ASDRouter {
     address public factory;
 
-    constructor( address _factory) public {
+    constructor( address _factory)  {
         factory = _factory;
     }
 
@@ -24,16 +24,16 @@ contract ASDRouter {
     }
 
     function removeLiquidity(address tokenA, address tokenB) public {
-        pair = getPair(tokenA, tokenB);
+        address pair = getPair(tokenA, tokenB);
         ASD_SwapPair(pair).removeLiquidity(msg.sender);
     }
 
-    function swap(address tokenA, uint256 amountA, address tokenB, uint256 amountB) public {
-        pair = getPair(tokenA, tokenB);
-        ASD_SwapPair(pair).swap(tokenA, amountA, tokenB, amountB, msg.sender);
-    }
+    // function swap(address tokenA, uint256 amountA, address tokenB, uint256 amountB) public {
+    //     address pair = getPair(tokenA, tokenB);
+    //     ASD_SwapPair(pair).swap(tokenA, amountA, tokenB, amountB, msg.sender);
+    // }
 
-    function getPair(address tokenA, address tokenB) returns(address pair) {
+    function getPair(address tokenA, address tokenB) private returns(address pair) {
         pair = TokenFactory(factory).getPair(tokenA, tokenB);
     }
 

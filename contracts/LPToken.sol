@@ -23,14 +23,16 @@ contract LPtoken is ERC20("LP token", "LP"){
         return list[user];
     }
 
-    function mint(address to, uint256 amount) NotZeroAddress(to) public {
+    function mint(address to, uint256 amount) NotZeroAddress(to) public returns(bool){
         list[to] += amount;
         _mint(to, amount);
+        return true;
     }
 
-    function burn(address to) NotZeroAddress(to) public {
+    function burn(address to) NotZeroAddress(to) public returns(bool) {
         _burn(to, list[to]);
         delete list[to];
+        return true;
     }
 
 

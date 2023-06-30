@@ -1,5 +1,6 @@
 import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
+import "@nomicfoundation/hardhat-ethers";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -14,21 +15,22 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      // forking: {
-      //   url: 'https://arbitrum-mainnet.infura.io/v3/5ea599f0ded84b0b9ad9b0dfcc1fb6acs',
-      // },
-      // accounts: {
-      //   mnemonic:
-      //     'test test test test test test test test test test test junk',
-      //   initialIndex: 0,
-      //   count: 20,
-      //   accountsBalance:
-      //     '100000000000000000000000', // 100000 ETH
-      // },
-      // blockGasLimit: 300000000,
-      // gas: 20000000,
-      // gasPrice: 25000000000,
-      chainId:1337
+      forking: {
+        // url: 'https://arbitrum-mainnet.infura.io/v3/5ea599f0ded84b0b9ad9b0dfcc1fb6acs',
+        url: "https://goerli-rollup.arbitrum.io/rpc",
+      },
+      accounts: {
+        mnemonic:
+          'test test test test test test test test test test test junk',
+        initialIndex: 0,
+        count: 20,
+        accountsBalance:
+          '100000000000000000000000', // 100000 ETH
+      },
+      blockGasLimit: 300000000,
+      gas: 20000000,
+      gasPrice: 25000000000,
+
     },
     sepolia: {
       url: 'https://ethereum-sepolia.blockpi.network/v1/rpc/public',
@@ -51,7 +53,7 @@ const config: HardhatUserConfig = {
       gasPrice: 25000000000,
     },
     arbitrum: {
-      url: 'https://goerli-rollup.arbitrum.io/rpc',
+      url: 'https://arbitrum-goerli.publicnode.com',
       chainId: 421613,
       accounts: [
         require('./privatekey.json')

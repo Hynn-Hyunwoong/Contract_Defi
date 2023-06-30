@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "./TokenPrice.sol";
 
 /*
-ETH : 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
-USDT : 0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7
-ARD : 0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6
+    address public EthAddress = 0x62CAe0FA2da220f43a51F86Db2EDb36DcA9A5A08;
+    address public UsdtAddress = 0x0a023a3423D9b27A0BE48c768CCF2dD7877fEf5E;
+    address public ArbAddress = 0x2eE9BFB2D319B31A573EA15774B755715988E99D;
  */
 
 contract TokenPriceOracle {
@@ -19,9 +19,9 @@ contract TokenPriceOracle {
 
     constructor() {
     // constructor(address _swapFeed){
-        ethPrice = new TokenPrice(address(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612));
-        usdtPrice = new TokenPrice(address(0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7));
-        arbPrice = new TokenPrice(address(0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6));
+        ethPrice = new TokenPrice(address(0x62CAe0FA2da220f43a51F86Db2EDb36DcA9A5A08));
+        usdtPrice = new TokenPrice(address(0x0a023a3423D9b27A0BE48c768CCF2dD7877fEf5E));
+        arbPrice = new TokenPrice(address(0x2eE9BFB2D319B31A573EA15774B755715988E99D));
         // swapTokenPrice = new TokenPrice(_swapFeed);
     }
 

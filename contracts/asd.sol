@@ -6,23 +6,25 @@ import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
 
 contract ASDToken is ERC20("ASDToken", "ASD"){
     address public minter;
-    
+    uint public _decimal;
     constructor() {
         minter = msg.sender;
-        _mint(msg.sender, 10000 * 10 ** 18);
+        _decimal = 10 ** decimals();
+        // _mint(msg.sender, 10000 * _decimal);
+
+    }
+
+    function setAmount(uint _amount) view private returns(uint amount){
+        amount = _amount * _decimal;
     }
 
     function mint(address to, uint256 amount)  external {
         require(msg.sender == minter, "Alert : Only Owner");
-        _mint(to, amount);
+        _mint(to, setAmount(amount));
     }
 
     function burn (address to, uint256 amount)  external {
         require(msg.sender == minter, "Alert : Only Owner");
-        _burn(to, amount);
+        _burn(to, setAmount(amount));
     }
-
-    function decimals() public view virtual override returns (uint8) {
-        return 18;
-    }   
 }

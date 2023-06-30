@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./IFactory.sol";
 import "./ASD_Pair.sol";
-contract TokenFactory {
+contract TokenFactory is IFactory{
 
-    mapping(address => mapping(address => address)) public getPair;
+    mapping(address => mapping(address => address)) public getPair; // token => token => pairAddress
+    mapping(address => uint) public poolLv;
+    mapping(address => uint) private feeKeeper;
     address[] public allPairs;
     uint fee;
 
@@ -20,12 +23,16 @@ contract TokenFactory {
     function setFee(uint _fee) public {
         fee = _fee;
     }
+    
+    function swapFeeKeeper(address _token, uint256 _amount) public {
+        feeKeeper[_token] += _amount;
+    }
 
     function allPairsLength() external view returns (uint) {
         return allPairs.length;
     }
 
-    function getPair(address tokenA, address tokenB) public returns(address) {
+    function getPairAddress(address tokenA, address tokenB) public returns(address) {
         return getPair[tokenA][tokenB];
     }
 
@@ -37,23 +44,10 @@ contract TokenFactory {
         ASD_SwapPair pair = new ASD_SwapPair();
         pair.initialize(token0, token1);
         pair.setFee(fee);
-        getPair[token0][token1] = pair;
-        getPair[token1][token0] = pair;
-        allPairs.push(pair);
-        emit PairCreated(token0, token1, pair, allPairs.length);
-    }
-}
-
-contract Token is ERC20 { // staking 작업 해야함.
-    constructor(string memory name, string memory symbol, uint initialSupply, address owner) ERC20(name, symbol) {
-        _mint(owner, initialSupply);
-    }
-
-    function mint(address to, uint amount) external {
-        _mint(to, amount);
-    }
-
-    function burn(address from, uint amount) external {
-        _burn(from, amount);
+        getPair[token0][token1] = address(pair);
+        getPair[token1][token0] = address(pair);
+        allPairs.push(address(pair));
+        poolLv[address(pair)] = 1;
+        emit PairCreated(token0, token1, address(pair), allPairs.length);
     }
 }

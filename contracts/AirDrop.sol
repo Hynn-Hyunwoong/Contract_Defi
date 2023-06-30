@@ -13,8 +13,8 @@ contract Airdrop {
         _;
     }
 
-    constructor(IERC20 _token) {
-        token = _token;
+    constructor(address _token) {
+        token = IERC20(_token);
         owner = msg.sender ;
     }
 

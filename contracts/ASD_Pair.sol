@@ -3,79 +3,91 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@uniswap/v2-core/contracts/libraries/SafeMath.sol";
+// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./IFactory.sol";
+import "./IASD_Pair.sol";
 import "./LPToken.sol";
 import "./TokenPriceOracle.sol"; 
 
 
-contract ASD_SwapPair {
-    using SafeMath for uint;
-
+contract ASD_SwapPair is IASD_SwapPair{
     address public factory;
     address public pool;
     address public tokenA;
     address public tokenB;
 
     uint public K;
-    uint256 public PriceASD = 1000000000;
+    uint256 public priceASD = 100000000;
     uint256 public otherPrice;
     uint256 private fee;
+    uint256 private _fee;
 
     mapping(address => mapping(address => uint)) private tokenList; // 무슨 토큰에 누가 얼마 공급했나.
-
+    mapping(address => uint) private tokens;
     mapping(address => uint) private poolAmount; // pair 토큰 A,B 수량
+    mapping(address => uint) public lpRatio;
+
+    LPtoken private LP;
+    TokenPriceOracle public tokenPriceOracle;
 
     event AddLiquidity(address from, address tokenA, address tokenB, uint256 _amountA, uint256 _amountB);
-    event removeLP(address provider, uint256 amountA, uint256 amountB);
+    event RemoveLP(address provider, uint256 amountA, uint256 amountB);
     event Swap(address sender, uint256 amountAIn, uint256 amountBIn, uint256 amountAOut, uint256 amountBOut);
+    
 
     constructor() public {
         factory = msg.sender;
         pool = address(this);
-        LPtoken LP = new LPtoken(pool);
+        LP = new LPtoken(pool);
+        tokenPriceOracle = new TokenPriceOracle();
+        _fee = fee * 10 ** 16;
+        setRatio();
     }
 
-    function getFee() public returns(uint256){
+    function getFee() view public override returns(uint256){
         return fee;
     }
 
-    function setFee( uint256 _fee) public {
-        fee = _fee;
+    function setFee( uint256 feeValue) public override {
+        fee = feeValue;
     }
 
-    function getLiquidity(address token, address provider) view returns(uint) {
-        return tokenlist[token][provider];
+
+    function setRatio() public override{
+        string memory symbolA = IERC20(tokenA).symbol();
+        string memory symbolB = IERC20(tokenB).symbol();
+        uint _tokenA = tokenPriceOracle.routing(symbolA);
+        uint _tokenB = tokenPriceOracle.routing(symbolB);
+ 
+
+        lpRatio[tokenA] = _tokenA;
+        lpRatio[tokenB] = _tokenB;
     }
 
-    function getPoolAmount(address _token) view returns(uint) {
-        return poolAmount(_token);
+    function getRatio() view public override returns(Ratio memory) {
+        Ratio memory ratio = Ratio(tokenA, lpRatio[tokenA], tokenB, lpRatio[tokenB]);
+        return ratio;
     }
 
-    function initialize(address _tokenA, address _tokenB) public {
+    function getLiquidity(address token, address provider) view public override returns(uint) {
+        return tokenList[token][provider];
+    }
+
+    function getPoolAmount(address _token) view public override returns(uint) {
+        return poolAmount[_token];
+    }
+
+    function initialize(address _tokenA, address _tokenB) public override{
         tokenA = _tokenA;
         tokenB = _tokenB;
     }
 
     function setK() private {
-        k = poolAmount[tokenA] * poolAmount[tokenB];
+        K = poolAmount[tokenA] * poolAmount[tokenB];
     }
 
-    function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) public {
+    function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) public payable override{
         require(_tokenA == tokenA && _tokenB == tokenB, "Incorrect Token");
-        // IERC20 token1 = IERC20(_tokenA);
-        // IERC20 token2 = IERC20(_tokenB);
-
-        // token1.approve(pool, _amountA);
-        // token2.approve(pool, _amountB);
-
-        // token1.transferFrom(msg.sender, pool, _amountA);
-        // token2.transferFrom(msg.sender, pool, _amountB);
-
-        // token_list[_tokenA][msg.sender] += _amountA;
-        // token_list[_tokenB][msg.sender] += _amountB;
-        // tokens[tokenA] += _amountA;
-        // tokens[tokenB] += _amountB;
 
         getTokenFromSender(_tokenA, _amountA, from);
         getTokenFromSender(_tokenB, _amountB, from);
@@ -84,19 +96,20 @@ contract ASD_SwapPair {
         // CPMM
         K= tokens[tokenA] * tokens[tokenB];
         uint256 rewardLP = _CPMM(_amountA, _amountB); 
-        require(LP.mint == true,"LP minting fail");    
+
+        require(LP.mint(from, rewardLP) == true,"LP minting fail");    
         
         emit AddLiquidity(from, tokenA, tokenB, _amountA, _amountB);
     }
 
-    function getTokenFromSender(address _token, uint256 _amount, address from) private payable {
+    function getTokenFromSender(address _token, uint256 _amount, address from) private {
         IERC20 token = IERC20(_token);
 
         token.approve(pool, _amount);
 
         token.transferFrom(from, pool, _amount);
 
-        token_list[_token][from] += _amount;
+        tokenList[_token][from] += _amount;
         tokens[_token] += _amount;
 
     }
@@ -114,12 +127,11 @@ contract ASD_SwapPair {
     }
 
 
-    function removeLiquidity( address from) public {
-        require(burnAmount != 0, "Wrong Request");
+    function removeLiquidity( address from) public override {
         uint256 burnAmount = LP.getList(from);
         uint256 burnA = tokenList[tokenA][from];
         uint256 burnB = tokenList[tokenB][from];
-        _burn(from, burnAmount);
+        _burn(from);
         _transfer(tokenA, from, burnA);
         _transfer(tokenB, from, burnB);
 
@@ -131,24 +143,38 @@ contract ASD_SwapPair {
         return true;
     }
 
-    function _transfer( address _token, address provider, uint256 amount) private {
-        IERC20(_token).transfer(provider, amount);
-        delete tokenList[_token][provider];
+    function _transfer( address _token, address to, uint256 amount) private {
+        IERC20(_token).transfer(to, amount);
+        delete tokenList[_token][to];
         poolAmount[_token] -= amount;
     }
 
-    function swap(address _tokenA, uint256 amountA, address _tokenB, uint256 amountB, address sender) private returns(uint256 swapAmount){
-        otherPrice = new TokenPriceOracle().routing(IERC(_tokenB).symbol());
-        uint256 swapAmount = otherPrice * fee / 100 / priceASD;
-        IERC swap = IERC20(tokenB);
-        getTokenFromSender(_tokenA, amountA, sender);
-        swap._transfer(_tokenB, sender, swapAmount);
-        emit Swap(sender, amountAIn, amountBIn, amountAOut, amountBOut);
+    function swap(address _token, uint256 amountIn, address sender) public override returns(uint256 swapedAmount){
+        address swapToken;
+        address swapedToken;
+        if(_token == tokenA) {
+            swapToken = tokenA;
+            swapedToken = tokenB;
+        }else {
+            swapToken = tokenB;
+            swapedToken = tokenA;    
+        }
+
+        uint256 swapFee = amountIn * _fee;
+        uint256 swapAmount = amountIn - swapFee;
+        getTokenFromSender(_token, amountIn, sender);
+        _transfer(_token, factory, swapFee);
+        tokens[swapToken] += swapAmount;
+        swapedAmount = K / tokens[swapToken];
+        
+        _transfer(swapedToken, sender, swapedAmount);
+        feeKeepingtoFactory(_token, swapFee);
+         
+        // emit Swap(sender, amountIn, swapedAmount);
     }
 
+    function feeKeepingtoFactory(address _token, uint256 _amount) private {
+        _transfer(_token, factory, _amount);
+        IFactory(factory).swapFeeKeeper(_token, _amount);
+    }
 }
-
-/*
-swap - 계산식 수정
-
-*/
