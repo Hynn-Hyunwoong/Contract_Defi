@@ -81,7 +81,8 @@ contract ASD_SwapPair is IASD_SwapPair {
     }
 
     function getLiquidity(address token, address provider) external view override returns(uint256) {
-        return tokenInfoA.balances[provider];
+        if(token == tokenA) return tokenInfoA.balances[provider];
+        else return tokenInfoB.balances[provider];
     }
 
     function getPoolAmount(address _token) external view override returns(uint256) {
