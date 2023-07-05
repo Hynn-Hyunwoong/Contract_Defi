@@ -16,10 +16,9 @@ contract ASDRouter {
     function addLiquidity( address tokenA, uint256 amountA, address tokenB, uint256 amountB) public {
         address pairAddress = IFactory(factory).getPairAddress(tokenA, tokenB);
         if (pairAddress == address(0)) {
-            IFactory(factory).createPair(tokenA, tokenB);
+            pairAddress = IFactory(factory).createPair(tokenA, tokenB);
         }
 
-        pairAddress = getPair(tokenA, tokenB);
         IASD_SwapPair(pairAddress).addLiquidity(tokenA, tokenB, amountA, amountB, msg.sender);
     }
 
@@ -28,9 +27,9 @@ contract ASDRouter {
         IASD_SwapPair(pair).removeLiquidity(msg.sender);
     }
 
-    function swap(address swap, address swaped, uint256 amount) public {
-        address pair = getPair(swap, swaped);
-        IASD_SwapPair(pair).swap(swap, swaped, amount, msg.sender);
+    function swap(address _swap, address _swaped, uint256 amount) public {
+        address pair = getPair(_swap, _swaped);
+        IASD_SwapPair(pair).swap(_swap, _swaped, amount, msg.sender);
     }
 
     function getPair(address tokenA, address tokenB) private returns(address pair) {

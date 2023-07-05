@@ -3,20 +3,32 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./ILPToken.sol";
 
 
-contract LPtoken is ERC20("LP token", "LP"){
+contract LPtoken is ILPToken, ERC20("LP token", "LP"){
     address private owner;
     mapping(address => uint256) private list;
 
-    constructor(address _owner) {
+    uint public level;
+
+    constructor(address _owner, uint poolLevel) {
         owner = _owner; //pool address
+        level = poolLevel;
     }
 
     modifier NotZeroAddress(address to) {
         require(to != address(0),"Zero Address");
         require(msg.sender == owner,"Wrong request");
         _;
+    }
+
+    function setLevel(uint _level) public {
+        level = _level;
+    }
+
+    function getLevel(address sender) public returns(uint _level){
+        _level = level;
     }
 
     function getList(address user) view public returns(uint256){

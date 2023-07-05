@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.9;
 
-import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ASDToken is ERC20("ASDToken", "ASD"){
     address public minter;
@@ -14,17 +14,13 @@ contract ASDToken is ERC20("ASDToken", "ASD"){
 
     }
 
-    function setAmount(uint _amount) view private returns(uint amount){
-        amount = _amount * _decimal;
-    }
-
     function mint(address to, uint256 amount)  external {
         require(msg.sender == minter, "Alert : Only Owner");
-        _mint(to, setAmount(amount));
+        _mint(to, amount * _decimal);
     }
 
     function burn (address to, uint256 amount)  external {
         require(msg.sender == minter, "Alert : Only Owner");
-        _burn(to, setAmount(amount));
+        _burn(to, amount * _decimal);
     }
 }
