@@ -27,7 +27,7 @@ contract LPtoken is ILPToken, ERC20("LP token", "LP"){
         level = _level;
     }
 
-    function getLevel(address sender) public returns(uint _level){
+    function getLevel() view public returns(uint _level){
         _level = level;
     }
 
