@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./IFactory.sol";
 import "./IASD_Pair.sol";
 import "./LPToken.sol";
@@ -43,13 +44,17 @@ contract ASD_SwapPair is IASD_SwapPair {
         _;
     }
 
-    constructor(uint256 _level) {
-        factory = msg.sender;
+    constructor(uint256 _level, address _owner) {
+        factory = _owner;
         pool = address(this);
         level = _level;
         tokenPriceOracle = new TokenPriceOracle();
         _fee = fee.mul(10 ** 16);
-        setRatio();
+        // setRatio();
+    }
+
+    function getLevel() view public returns(uint256 _level){
+        _level = level;
     }
 
     function setLevel(uint256 _level) external onlyFactory {
@@ -57,15 +62,15 @@ contract ASD_SwapPair is IASD_SwapPair {
         LP.setLevel(_level);
     }
 
-    function getFee() external view override returns(uint256) {
+    function getFee() external view virtual returns(uint256) {
         return fee;
     }
 
-    function setFee(uint256 feeValue) external override onlyFactory {
+    function setFee(uint256 feeValue) external virtual onlyFactory {
         fee = feeValue;
     }
 
-    function setRatio() public override {
+    function setRatio() public virtual {
         string memory symbolA = IERC20(tokenA).symbol();
         string memory symbolB = IERC20(tokenB).symbol();
         uint256 _tokenA = tokenPriceOracle.routing(symbolA);
@@ -75,17 +80,17 @@ contract ASD_SwapPair is IASD_SwapPair {
         tokenInfoB.totalSupply = _tokenB;
     }
 
-    function getRatio() external view override returns(Ratio memory) {
+    function getRatio() external view virtual returns(Ratio memory) {
         Ratio memory ratio = Ratio(tokenA, tokenInfoA.totalSupply, tokenB, tokenInfoB.totalSupply);
         return ratio;
     }
 
-    function getLiquidity(address token, address provider) external view override returns(uint256) {
+    function getLiquidity(address token, address provider) external view virtual returns(uint256) {
         if(token == tokenA) return tokenInfoA.balances[provider];
         else return tokenInfoB.balances[provider];
     }
 
-    function getPoolAmount(address _token) external view override returns(uint256) {
+    function getPoolAmount(address _token) external view virtual returns(uint256) {
         if (_token == tokenA) {
             return tokenInfoA.totalSupply;
         } else if (_token == tokenB) {
@@ -94,7 +99,7 @@ contract ASD_SwapPair is IASD_SwapPair {
         return 0;
     }
 
-    function initialize(address _tokenA, address _tokenB) external override onlyFactory {
+    function initialize(address _tokenA, address _tokenB) external virtual onlyFactory {
         tokenA = _tokenA;
         tokenB = _tokenB;
     }
@@ -103,13 +108,13 @@ contract ASD_SwapPair is IASD_SwapPair {
         K = tokenInfoA.totalSupply.mul(tokenInfoB.totalSupply);
     }
 
-    function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) public payable override {
-        require(_tokenA == tokenA && _tokenB == tokenB, "ASD_SwapPair: Incorrect Token");
+    function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) public virtual {
+        // require(_tokenA == tokenA && _tokenB == tokenB, "ASD_SwapPair: Incorrect Token");
 
         getTokenFromSender(_tokenA, _amountA, from);
         getTokenFromSender(_tokenB, _amountB, from);
 
-        K = tokenInfoA.totalSupply.mul(tokenInfoB.totalSupply);
+        K = SafeMath.mul(tokenInfoA.totalSupply, tokenInfoB.totalSupply);
         uint256 rewardLP = getLpReward(_amountA, _amountB); 
 
         require(LP.mint(from, rewardLP), "ASD_SwapPair: LP minting failed");    
@@ -123,19 +128,19 @@ contract ASD_SwapPair is IASD_SwapPair {
         token.approve(pool, _amount);
         token.transferFrom(from, pool, _amount);
 
-        tokenInfoA.balances[from] = tokenInfoA.balances[from].add(_amount);
+        tokenInfoA.balances[from] = SafeMath.add(tokenInfoA.balances[from], _amount);
         if (_token == tokenA) {
-            tokenInfoA.totalSupply = tokenInfoA.totalSupply.add(_amount);
+            tokenInfoA.totalSupply = SafeMath.add(tokenInfoA.totalSupply, _amount);
         } else if (_token == tokenB) {
-            tokenInfoB.totalSupply = tokenInfoB.totalSupply.add(_amount);
+            tokenInfoB.totalSupply = SafeMath.add(tokenInfoB.totalSupply, _amount);
         }
     }
 
     function getLpReward(uint256 _amountA, uint256 _amountB) public view returns(uint256 reward) {
-        uint256 LPtotal = tokenInfoA.totalSupply.add(tokenInfoB.totalSupply);
-        uint256 ratio_A = (_amountA.mul(100)).div(LPtotal);
-        uint256 ratio_B = (_amountB.mul(100)).div(LPtotal);
-        reward = Math.sqrt(K.mul(ratio_A.add(ratio_B)).div(10000));
+        uint256 LPtotal = SafeMath.add(tokenInfoA.totalSupply, tokenInfoB.totalSupply);
+        uint256 ratio_A = SafeMath.div(SafeMath.mul(_amountA, 100),LPtotal);
+        uint256 ratio_B = SafeMath.div(SafeMath.mul(_amountB, 100),LPtotal);
+        reward = Math.sqrt(K.mul(ratio_A.add(ratio_B)).div(10000)); // 수정 필요.
     }
 
     function _mint(address to, uint256 amount) private returns(bool) {
@@ -143,7 +148,7 @@ contract ASD_SwapPair is IASD_SwapPair {
         return true;
     }
 
-    function removeLiquidity(address from) public override {
+    function removeLiquidity(address from) public virtual {
         uint256 burnA = tokenInfoA.balances[from];
         uint256 burnB = tokenInfoB.balances[from];
         _burn(from);
@@ -162,13 +167,13 @@ contract ASD_SwapPair is IASD_SwapPair {
         IERC20(_token).transfer(to, amount);
         delete tokenInfoA.balances[to];
         if (_token == tokenA) {
-            tokenInfoA.totalSupply = tokenInfoA.totalSupply.sub(amount);
+            tokenInfoA.totalSupply = SafeMath.sub(tokenInfoA.totalSupply, amount);
         } else if (_token == tokenB) {
-            tokenInfoB.totalSupply = tokenInfoB.totalSupply.sub(amount);
+            tokenInfoB.totalSupply = SafeMath.sub(tokenInfoB.totalSupply, amount);
         }
     }
 
-    function swap(address _swap, address _swaped, uint256 amountIn, address sender) public override returns(uint256 swapedAmount) {
+    function swap(address _swap, address _swaped, uint256 amountIn, address sender) public virtual returns(uint256 swapedAmount) {
         uint256 swapFee = amountIn.mul(_fee);
         uint256 swapAmount = amountIn.sub(swapFee);
         getTokenFromSender(_swap, amountIn, sender);

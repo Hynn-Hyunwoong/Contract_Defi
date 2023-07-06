@@ -15,7 +15,7 @@ interface IASD_SwapPair {
     function getLiquidity(address token, address provider) external view returns (uint);
     function getPoolAmount(address _token) external view returns (uint);
     function initialize(address _tokenA, address _tokenB) external;
-    function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) external payable;
+    function addLiquidity(address _tokenA, address _tokenB, uint256 _amountA, uint256 _amountB, address from) external;
     function removeLiquidity(address from) external;
     function swap(address _swap, address _swapped, uint256 amountIn, address sender) external returns (uint256);
 }
