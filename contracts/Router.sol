@@ -13,13 +13,13 @@ contract ASDRouter {
         factory = _factory;
     }
 
-    function addLiquidity( address tokenA, uint256 amountA, address tokenB, uint256 amountB) public {
+    function addLiquidity( address tokenA, uint256 amountA, address tokenB, uint256 amountB, address sender) public {
         address pairAddress = IFactory(factory).getPairAddress(tokenA, tokenB);
         if (pairAddress == address(0)) {
             pairAddress = IFactory(factory).createPair(tokenA, tokenB);
         }
 
-        IASD_SwapPair(pairAddress).addLiquidity(tokenA, tokenB, amountA, amountB, msg.sender);
+        IASD_SwapPair(pairAddress).addLiquidity(tokenA, tokenB, amountA, amountB, sender);
     }
 
     function removeLiquidity(address tokenA, address tokenB) public {

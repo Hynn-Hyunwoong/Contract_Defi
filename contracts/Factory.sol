@@ -3,24 +3,23 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IFactory.sol";
-import "./ASD_Pair.sol";
+// import "./ASD_Pair.sol";
 import "./IASD_Pair.sol";
+import "./IDeploy.sol";
+
 contract TokenFactory is IFactory{
 
     mapping(address => mapping(address => address)) public getPair; // token => token => pairAddress
     mapping(address => uint) public poolLv;
     mapping(address => uint) private feeKeeper;
     address[] public allPairs;
-    uint fee;
+    address private deployer=0xd9145CCE52D386f254917e481eB44e9943F39138;
+    uint fee=95; // ex) 95
     uint private defaultLevel = 1;
-    uint private level;
 
 
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
-    function setLevel(uint _level) public {
-        level = _level;
-    }
 
     function setFee(uint _fee) public {
         fee = _fee;
@@ -34,19 +33,16 @@ contract TokenFactory is IFactory{
         return allPairs.length;
     }
 
-    function getPairAddress(address tokenA, address tokenB) view public returns(address) {
+    function getPairAddress(address tokenA, address tokenB) view external returns(address) {
         return getPair[tokenA][tokenB];
     }
 
     function createPair(address tokenA, address tokenB) public returns (address pair) {
         require(tokenA != tokenB, 'IDENTICAL_ADDRESSES');
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'ZERO_ADDRESS');
         require(getPair[token0][token1] == address(0), 'PAIR_EXISTS');
-        if(level == 0) pair = createPool(token0, token1, defaultLevel);
-        else pair = createPool(token0, token1, level);
-        level = 0;
-        emit PairCreated(token0, token1, pair, allPairs.length);
+        pair = createPool(tokenA, tokenB, defaultLevel);
+        emit PairCreated(tokenA, tokenB, pair, allPairs.length);
     }
 
     function setPoolLevel(address pool, uint _level) public {
@@ -54,14 +50,13 @@ contract TokenFactory is IFactory{
         poolLv[pool] = _level;
     }
 
-    function createPool(address tokenA, address tokenB, uint _level) public returns(address pairAddress){
-        ASD_SwapPair pair = new ASD_SwapPair(_level);
-        pair.initialize(tokenA, tokenB);
-        pair.setFee(fee);
-        pairAddress = address(pair);
-        getPair[tokenA][tokenB] = pairAddress;
-        getPair[tokenB][tokenA] = pairAddress;
-        allPairs.push(pairAddress);
-        poolLv[pairAddress] = _level;
+    function createPool(address tokenA, address tokenB, uint _level) public returns(address pair){
+        pair = IDeploy(deployer).deployPair(_level, address(this));
+        IASD_SwapPair(pair).initialize(tokenA, tokenB);
+        IASD_SwapPair(pair).setFee(fee);
+        getPair[tokenA][tokenB] = pair;
+        getPair[tokenB][tokenA] = pair;
+        allPairs.push(pair);
+        poolLv[pair] = _level;
     }
 }

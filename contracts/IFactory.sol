@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 interface IFactory {
-    function setLevel(uint _level) external;
     function setFee(uint _fee) external;
     function swapFeeKeeper(address _token, uint256 _amount) external;
     function allPairsLength() external view returns (uint);
