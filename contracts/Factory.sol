@@ -28,10 +28,9 @@ contract TokenFactory is IFactory{
     }
  
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
-    // constructor(address _pairDeployer, address _stakingDeployer){
-    constructor(address _pairDeployer){
+    constructor(address _pairDeployer, address _stakingDeployer){
         pairDeployer = _pairDeployer;
-        // stakingDeployer = _stakingDeployer;
+        stakingDeployer = _stakingDeployer;
     }
 
     function setFee(uint _fee) public {
@@ -84,9 +83,9 @@ contract TokenFactory is IFactory{
     }
 
     function createStaking(address _token) public returns(address staking){
-        staking = IStakingDeployer(stakingDeployer).stakingDeploy(_token);
+        staking = IStakingDeployer(stakingDeployer).LpStakingDeploy(_token);
         stakingPool[_token] = staking;
-    }
+    } // 의제로만 생성가능하도록?? 일단 아무나 생성가능
 
     function getStakingPool(address _token) view public returns(address) {
         return stakingPool[_token];

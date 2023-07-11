@@ -34,12 +34,12 @@ contract ASDRouter {
         ISwapPool(pair).swap(_swap, _swaped, amount, msg.sender);
     }
 
+    function getStakingAddress(address _token) public returns(address staking){
+        staking = factory.getStakingPool(_token); // _token은 lptoken이나 ASD 토큰 CA
+        if(staking == address(0)) staking = factory.createStaking(_token);
+    }
 
+    function addLpStaking(address sender, address lpToken, uint256 amount, uint256 time) public {
 
-    // function addStaking(address _token) public {
-    //     address staking = factory.getStaking();
-    //     factory.createStaking(_token);
-    // }
-
-
+    }
 }

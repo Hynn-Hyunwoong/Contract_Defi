@@ -8,7 +8,7 @@ import "./IStaking.sol";
 import "./ISwapPool.sol";
 import "./IASDToken.sol";
 
-contract Staking is IStaking{
+contract LpStaking is IStaking{
     // uint public month = 30 days;
     uint public totalAmount;
     address public dropToken;
@@ -22,7 +22,7 @@ contract Staking is IStaking{
         dropToken = _dropToken;
     }
 
-    function addStaking(address sender, address lpToken, uint amount, uint time) public override returns(bool){
+    function addStaking(address sender, address lpToken, uint256 amount, uint256 time) public override returns(bool){
         totalAmount += amount;
         period[sender] = time;
         stakingList[lpToken][sender] = amount;

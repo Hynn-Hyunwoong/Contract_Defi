@@ -77,7 +77,7 @@ contract SwapPool is ISwapPool {
         return LP.getList(sender);
     }
 
-    function getPoolAmount(address _token) external view virtual returns(uint256) {
+    function getPoolAmount(address _token) external view virtual override returns(uint256) {
         if (_token == tokenA) {
             return tokenInfoA.totalSupply;
         } else if (_token == tokenB) {
@@ -99,7 +99,7 @@ contract SwapPool is ISwapPool {
         getTokenFromSender(_tokenA, _amountA, from);
         getTokenFromSender(_tokenB, _amountB, from);
 
-        K = tokenInfoA.totalSupply.mul(tokenInfoB.totalSupply);
+        setK();
         uint256 rewardLP = getLpReward(_amountA, _amountB); 
 
         require(_mint(from, rewardLP), "ASD_SwapPair: LP minting failed");    
@@ -160,7 +160,7 @@ contract SwapPool is ISwapPool {
             tokenInfoB.totalSupply = tokenInfoB.totalSupply.sub(amount);
         }
     }
-// 1000000000000000000000
+    
     function swap(address _swap, address _swaped, uint256 amountIn, address sender) public virtual override returns(uint256 swapedAmount) {
         uint256 swapFee = amountIn.mul(fee).div(100);
         uint256 swapAmount = amountIn.sub(swapFee);

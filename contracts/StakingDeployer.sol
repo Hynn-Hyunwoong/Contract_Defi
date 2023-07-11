@@ -13,11 +13,16 @@ contract StakingDeployer is IStakingDeployer{
         owner = _owner;
     }
 
-    function  stakingDeploy(address _token) public returns(address){
+    function  LpStakingDeploy(address _token) public returns(address){
         require( msg.sender == owner, "No Authority");
-        Staking staking = new Staking(owner, _token);
+        LpStaking staking = new LpStaking(owner, _token);
 
         return address(staking);
+    }
+
+    function ASDstakingDeploy(address _token) public returns(address){
+        require( msg.sender == owner, "No Authority");
+        // ASDstaking staking = new ASDstaking(owner, _token);
     }
    
 }

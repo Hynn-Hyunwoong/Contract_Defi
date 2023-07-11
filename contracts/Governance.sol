@@ -1,4 +1,4 @@
-2. Governance
+// 2. Governance
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
@@ -91,6 +91,7 @@ contract Governance {
         governanceToken.setFactory(address(this));
     }
 
+    // 1
     function proposeTopic(string memory _title, string memory _description, address _tokenContract , uint _addmint, uint _addburn) external onlyTokenHolder {
         require(bytes(_title).length > 0, "Topic title cannot be empty.");
         require(bytes(_description).length > 0, "Topic description cannot be empty.");
@@ -114,6 +115,7 @@ contract Governance {
         nextTopicId++;
         }
 
+    // 2
     function vote(uint _topicId, bool _vote) external onlyTokenHolder {
     require(_topicId < nextTopicId, "Topic does not exist.");
     require(!topics[_topicId].isEnded, "Voting has ended.");
