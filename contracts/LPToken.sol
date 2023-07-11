@@ -23,6 +23,10 @@ contract LPtoken is ILPToken, ERC20("LP token", "LP"){
         _;
     }
 
+    function getOwner() view public returns(address) {
+        return owner;
+    }
+
     function setLevel(uint _level) public {
         level = _level;
     }
@@ -44,6 +48,12 @@ contract LPtoken is ILPToken, ERC20("LP token", "LP"){
     function burn(address to) NotZeroAddress(to) public returns(bool) {
         _burn(to, list[to]);
         delete list[to];
+        return true;
+    }
+
+    function DexApprove(address from, uint256 amount) public virtual override returns(bool) {
+        address spender = _msgSender();
+        _approve(from, spender, amount);
         return true;
     }
 

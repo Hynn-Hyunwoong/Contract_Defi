@@ -3,8 +3,9 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./IASDToken.sol";
 
-contract ASDToken is ERC20("ASDToken", "ASD"){
+contract ASDToken is IASDToken, ERC20("ASDToken", "ASD"){
     address public minter;
     uint public _decimal;
     constructor() {
@@ -14,12 +15,12 @@ contract ASDToken is ERC20("ASDToken", "ASD"){
 
     }
 
-    function mint(address to, uint256 amount)  external {
+    function mint(address to, uint256 amount) virtual override external {
         require(msg.sender == minter, "Alert : Only Owner");
         _mint(to, amount * _decimal);
     }
 
-    function burn (address to, uint256 amount)  external {
+    function burn (address to, uint256 amount) virtual override external {
         require(msg.sender == minter, "Alert : Only Owner");
         _burn(to, amount * _decimal);
     }

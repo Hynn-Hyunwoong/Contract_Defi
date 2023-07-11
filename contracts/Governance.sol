@@ -1,155 +1,242 @@
+// 2. Governance
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./AirDrop.sol";
+import "./GovernanceToken.sol";
+import "./Airdrop.sol";
 
-contract GovernanceToken is ERC20 {
-    Airdrop public airdrop;
-    address public factory; 
 
-    modifier onlyFactory() {
-        require(msg.sender == factory, "Only factory can call this function.");
-        _;
-    }
-    constructor() ERC20("GovernanceToken", "GT") {
-        _mint(msg.sender, 1000);
-        airdrop = new Airdrop(address(this));
-    }
-
-    function mint(address to, uint amount) external onlyFactory{
-        _mint(to, amount);
-    }
-
-    function burn(address from, uint amount) external onlyFactory{
-        _burn(from, amount);
-    }
-    function distributeAirdrop(address[] memory recipients, uint256[] memory amounts) external {
-        airdrop.airdrop(recipients, amounts);
-    }
-}
-
-// contract Token is ERC20 {
-
-//     address public factory; 
-
-//     modifier onlyFactory() {
-//         require(msg.sender == factory, "Only factory can call this function.");
-//         _;
-//     }
-//     constructor() ERC20("Token", "TKN") {}
-
-//     function mint(address to, uint amount) external onlyFactory{
-//         _mint(to, amount);
-//     }
-
-//     function burn(address from, uint amount) external onlyFactory{
-//         _burn(from, amount);
-//     }
-// }
 
 contract Governance {
     GovernanceToken public governanceToken;
-    Token public token;
+    address public factory;
+    uint public totalTokenBurned;
+    uint public totalTokenMinted;
+    uint public totalTokenMintedGovernance;
+    uint public totalTokenBurnedGovernance;
+    uint public nextTopicId;
+    uint public nextVoteId;
+    uint public nextTokenBurnedId;
+    uint public nextTokenMintedId;
+    uint public nextTokenMintedGovernanceId;
+    uint public nextTokenBurnedGovernanceId;
+    uint public nextVoteWeightIdTokenBurned;
+    uint public nextVoteWeightIdTokenMinted;
+    uint public nextVoteWeightIdTokenMintedGovernance;
+    uint public nextVoteWeightIdTokenBurnedGovernance;
+    
     mapping(uint => Topic) public topics;
     mapping(address => uint) public lastVotedTime;
-    mapping(address => address) public delegates;
-    
-    uint public nextTopicId;
-    uint public quorum = 51;
-    uint public Timelock = 2 weeks;
+    mapping(uint => Vote) public votes;
+    mapping(address => Delegation) public delegations;
+    mapping(address => TimeLock) public timeLocks;
 
-    enum TopicType { MintToken, BurnToken, MintGovernanceToken, BurnGovernanceToken }
+    enum TopicType {MintToken, BurnToken, MintGovernanceToken, BurnGovernanceToke}
 
-    modifier onlyTokenHolders(){
-        require(governanceToken.balanceOf(msg.sender) > 0, "This function requires at least 1 governance token.");
+    modifier onlyTokenHolder(){
+        require(governanceToken.balanceOf(msg.sender) > 0, "Alert : only token holder can call this function");
+        _;
+    }
+
+    modifier onlyFactory(){
+        require(msg.sender == factory, "Alert : only factory can call this function");
         _;
     }
 
     struct Topic {
-        TopicType topicType;
-        address target;
+        uint id;
+        string title;
+        string description;
+        uint voteCount;
+        address tokenContract;
+        uint startTime;
+        uint endTime;
+        uint addmint;
+        uint addburn;
+        bool isEnded;
+        bool isApproved;
+        mapping(address => bool) isVoted;
+        mapping(address => uint) voteWeight;
+    }
+
+    struct Vote {
+        uint id;
+        uint topicId;
+        address voter;
+        uint voteWeight;
+        bool isVoted;
+        bool isApproved;
+    }
+
+    struct Delegation {
+        address delegatee;
+        uint startTime;
+        bool revoked;
+    }
+
+    struct TimeLock {
+        uint unlockTime;
         uint amount;
-        address proposer;
-        uint forVotes;
-        uint againstVotes;
-        bool executed;
     }
 
-    event TopicProposed(uint id, TopicType topicType, address target, uint amount, address proposer);
-    event Voted(uint id, address voter, bool vote, uint weight);
-
-    constructor(address _governanceToken, address _token) {
-        governanceToken = GovernanceToken(_governanceToken);
-        token = Token(_token);
-    }
-
-    // 의제 생성 함수
-    function proposeTopic(TopicType topicType, address target, uint amount) external {
-        // 토큰을 하나이상 가져야함.
-        require(governanceToken.balanceOf(msg.sender) >= 1, "This function requires at least 1 governance token.");
-        governanceToken.burn(msg.sender, 1);
-
-        topics[nextTopicId] = Topic(topicType, target, amount, msg.sender, 0, 0, false);
-        emit TopicProposed(nextTopicId, topicType, target, amount, msg.sender);
-        nextTopicId++;
-    }
-
-
-    // 투표
-    function vote(uint topicId, bool voteValue) external {
-    // 타임 락 의제 신청 다시 못함 기간동안.
-    require(lastVotedTime[msg.sender] + Timelock < block.timestamp, "You must wait for the timelock to expire before voting again.");
-    // 토큰 갯수 1이상 존재
-    require(governanceToken.balanceOf(msg.sender) > 0, "This function requires at least 1 governance token.");
+    event TopicCreated(uint id, string title, string description, uint startTime, uint endTime);
+    event TopicEnded(uint id, uint voteCount, bool isApproved);
+    event VoteCreated(uint id, uint topicId, address voter, uint voteWeight, bool isApproved);
+    event DelegateCreated(uint id, address delegate, uint delegateWeight);
     
-
-    // 투표한 시간
-    lastVotedTime[msg.sender] = block.timestamp;
-
-    // 거버넌스 토큰이 몇개 있는지.
-    uint weight = governanceToken.balanceOf(msg.sender);
-    Topic storage topic = topics[topicId];
-
-    if(delegates[msg.sender] != address(0)){
-        weight += governanceToken.balanceOf(delegates[msg.sender]);
+    constructor(address _governanceToken) {
+        governanceToken = GovernanceToken(_governanceToken);
+        factory = msg.sender;
+        governanceToken.setFactory(address(this));
     }
 
-    if (voteValue) {
-        topic.forVotes += weight;
-    } else {
-        topic.againstVotes += weight;
-    }
+    // 1
+    function proposeTopic(string memory _title, string memory _description, address _tokenContract , uint _addmint, uint _addburn) external onlyTokenHolder {
+        require(bytes(_title).length > 0, "Topic title cannot be empty.");
+        require(bytes(_description).length > 0, "Topic description cannot be empty.");
+        require(governanceToken.balanceOf(msg.sender) > 0, "You must hold tokens to propose a topic.");
+        require(block.timestamp > lastVotedTime[msg.sender] + 1 days, "You must wait 24 hours before proposing a new topic.");
+        require(!(_addmint > 0 && _addburn > 0), "You can only add mint or burn, not both.");
 
-    emit Voted(topicId, msg.sender, voteValue, weight);
-}
+        Topic storage newTopic = topics[nextTopicId];
+        newTopic.id = nextTopicId;
+        newTopic.title = _title;
+        newTopic.description = _description;
+        newTopic.tokenContract = _tokenContract;
+        newTopic.addmint = _addmint;
+        newTopic.addburn = _addburn;
+        newTopic.startTime = block.timestamp;
+        newTopic.endTime = block.timestamp + 2 days;
+        newTopic.isEnded = false;
+        newTopic.isApproved = false;
 
-
-    // 의제 실행
-    function executeTopic(uint topicId) external onlyTokenHolders {
-        Topic storage topic = topics[topicId];
-
-        // 의제가 실행이 되었나.
-        require(!topic.executed, "This topic has already been executed.");
-        // 의제 거절 ( 총 투표수 중 투표 율이 부족할 때. )
-        require((topic.forVotes * 100) / (topic.forVotes + topic.againstVotes) >= quorum, "This topic has not been approved.");
-        // 찬반이 반대가 더 높을 때.
-        require(topic.forVotes > (topic.forVotes + topic.againstVotes) / 2, "This topic has not been approved.");
-
-        topic.executed = true;
-
-        if (topic.topicType == TopicType.MintToken) {
-            token.mint(topic.target, topic.amount);
-        } else if (topic.topicType == TopicType.BurnToken) {
-            token.burn(topic.target, topic.amount);
-        } else if (topic.topicType == TopicType.MintGovernanceToken) {
-            governanceToken.mint(topic.target, topic.amount);
-        } else if (topic.topicType == TopicType.BurnGovernanceToken) {
-            governanceToken.burn(topic.target, topic.amount);
+        emit TopicCreated(nextTopicId, _title, _description, block.timestamp, block.timestamp + 2 days);
+        nextTopicId++;
         }
-    }
 
-    function delegate(address delegatee) external onlyTokenHolders {
-        delegates[msg.sender] = delegatee;
+    // 2
+    function vote(uint _topicId, bool _vote) external onlyTokenHolder {
+    require(_topicId < nextTopicId, "Topic does not exist.");
+    require(!topics[_topicId].isEnded, "Voting has ended.");
+    require(!topics[_topicId].isVoted[msg.sender], "You have already voted for this topic.");
+    require(block.timestamp > topics[_topicId].startTime, "Voting has not started yet.");
+
+    uint voteWeight = governanceToken.balanceOf(msg.sender);
+
+    Vote storage newVote = votes[nextVoteId];
+    newVote.id = nextVoteId;
+    newVote.topicId = _topicId;
+    newVote.voter = msg.sender;
+    newVote.voteWeight = voteWeight;
+    newVote.isVoted = true;
+    newVote.isApproved = _vote;
+
+    emit VoteCreated(nextVoteId, _topicId, msg.sender, voteWeight, _vote);
+
+    nextVoteId++;
+
+    topics[_topicId].isVoted[msg.sender] = true;
+    topics[_topicId].voteCount++;
+
+    if(_vote){
+        topics[_topicId].voteWeight[msg.sender] += voteWeight;
+    } else {
+        topics[_topicId].voteWeight[msg.sender] -= voteWeight;
     }
 }
+
+
+    function endTopic (uint _topicId) external onlyFactory{
+        require(_topicId < nextTopicId, "Topic does not exist.");
+        require(!topics[_topicId].isEnded, "Voting has ended.");
+        require(block.timestamp > topics[_topicId].endTime, "Voting has not ended yet.");
+
+        Topic storage topic = topics[_topicId];
+        uint totalVotes = 0;
+        for(uint i=0; i< nextVoteId; i++){
+            if(votes[i].topicId == _topicId){
+                totalVotes += votes[i].voteWeight;
+            }
+        }
+        uint totalSupply = governanceToken.totalSupply();
+
+        if(totalVotes * 2 < totalSupply) {
+            topic.isApproved = false;
+        } else {
+            uint agreeVotes = 0;
+            for(uint i=0; i <nextVoteId; i++){
+                if(votes[i].topicId == _topicId && votes[i].isApproved){
+                    agreeVotes += votes[i].voteWeight;
+                } 
+            }
+            if(agreeVotes * 2 < totalVotes) {
+                topic.isApproved = true;
+                executeTopic(_topicId);
+            } else {
+                topic.isApproved = false;
+            }
+        }
+        topic.isEnded = true;
+        emit TopicEnded(_topicId, topic.voteCount, topic.isApproved);
+    }
+
+    function executeTopic(uint _topicId)internal onlyFactory{
+    require(_topicId < nextTopicId, "Topic does not exist.");
+    require(topics[_topicId].isEnded, "Voting has not ended yet.");
+    require(topics[_topicId].isApproved, "Topic is not approved.");
+
+    Topic storage topic = topics[_topicId];
+
+    GovernanceToken token = GovernanceToken(topic.tokenContract);
+
+    if(topic.addmint != 0) {
+        token.mint(address(this), topic.addmint);
+        totalTokenMinted += topic.addmint;
+        totalTokenMintedGovernance += topic.addmint;
+        nextTokenMintedId++;
+        nextTokenMintedGovernanceId++;
+        nextVoteWeightIdTokenMinted++;
+        nextVoteWeightIdTokenMintedGovernance++;
+    }
+
+    if(topic.addburn != 0){
+        token.burn(address(this), topic.addburn);
+        totalTokenBurned += topic.addburn;
+        totalTokenBurnedGovernance += topic.addburn;
+        nextTokenBurnedId++;
+        nextTokenBurnedGovernanceId++;
+        nextVoteWeightIdTokenBurned++;
+        nextVoteWeightIdTokenBurnedGovernance++;
+    }
+    }
+
+    function delegateTokens(address delegatee) external onlyFactory {
+        require(governanceToken.balanceOf(delegatee) > 0, "Delegatee must hold tokens.");
+        require(delegations[msg.sender].delegatee == address(0) || delegations[msg.sender].revoked, "You have already delegated.");
+
+        delegations[msg.sender].delegatee = delegatee;
+        delegations[msg.sender].startTime = block.timestamp;
+        delegations[msg.sender].revoked = false;
+
+        _lockTokens(msg.sender, governanceToken.balanceOf(msg.sender), 48 hours);
+    }
+
+    function undelegateTokens() external  onlyFactory{
+        require(!delegations[msg.sender].revoked, "You have not delegated.");
+        require(block.timestamp > delegations[msg.sender].startTime + 48 hours, "You cannot undelegate within 48 hours of delegation.");
+
+        delegations[msg.sender].revoked = true;
+    }
+
+    function stakeToken(uint _amount) external onlyFactory {
+        require(_amount > 0, "amount cannot be 0");
+        governanceToken.transferFrom(msg.sender, address(this), _amount);
+        // staking Logic
+    }
+
+    function _lockTokens(address _account, uint256 _amount, uint256 _duration) internal onlyFactory {
+        timeLocks[_account] = TimeLock(block.timestamp + _duration, _amount);
+    }
+}
+
