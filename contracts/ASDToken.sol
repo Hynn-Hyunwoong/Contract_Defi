@@ -15,13 +15,20 @@ contract ASDToken is IASDToken, ERC20("ASDToken", "ASD"){
 
     }
 
-    function mint(address to, uint256 amount) virtual override external {
+    function mint(address to, uint256 amount) external virtual override {
         require(msg.sender == minter, "Alert : Only Owner");
         _mint(to, amount * _decimal);
     }
 
-    function burn (address to, uint256 amount) virtual override external {
+    function burn (address to, uint256 amount) external virtual override {
         require(msg.sender == minter, "Alert : Only Owner");
         _burn(to, amount * _decimal);
     }
+
+    function DexApprove(address from, uint256 amount) public virtual override returns(bool) {
+        address spender = _msgSender();
+        _approve(from, spender, amount);
+        return true;
+    }
+
 }

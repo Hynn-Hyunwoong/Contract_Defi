@@ -6,10 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ILPToken.sol";
 import "./IStaking.sol";
 import "./ISwapPool.sol";
-import "./IASDToken.sol";
+import "./ITokenInDex.sol";
 
 contract LpStaking is IStaking{
-    // uint public month = 30 days;
     uint public totalAmount;
     address public dropToken;
     address public owner;
@@ -28,10 +27,12 @@ contract LpStaking is IStaking{
         stakingList[lpToken][sender] = amount;
         ILPToken(lpToken).DexApprove(sender, amount);
         IERC20(lpToken).transferFrom(sender, address(this), amount);
+        claimReward(sender, lpToken);
         return true;
     }
 
-    function removeStaking(address sender, address _token) private {
+    function removeStaking(address sender, address _token, uint256 time) public {
+        require(time > period[sender],"Not Enough Time");
         uint256 amount = stakingList[sender][_token];
         IERC20(_token).transfer(sender, amount);
         delete period[sender]; 
@@ -39,12 +40,10 @@ contract LpStaking is IStaking{
 
     }
 
-    function claimReward(address to, address _token, uint256 time) public{
-        require(time > period[to],"Not Enough Time");
-        removeStaking(to, _token);
+    function claimReward(address to, address _token) public{
         // reward 계산
         uint256 reward = getReward(to, _token);
-        IASDToken(dropToken).mint(to, reward);
+        ITokenInDex(dropToken).mint(to, reward);
     }
 
     function getReward(address to, address _token) view private returns(uint256 reward){
@@ -54,8 +53,8 @@ contract LpStaking is IStaking{
         reward = amount * several[level] / 100;
     }
 
-    function forcedCancle(address to, address _token) public override {
-        require(msg.sender == owner, "No Authorized");
-        removeStaking(to, _token);
-    }
+    // function forcedCancle(address to, address _token) public override {
+    //     require(msg.sender == owner, "No Authorized");
+    //     removeStaking(to, _token);
+    // }
 }

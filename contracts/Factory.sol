@@ -82,10 +82,15 @@ contract TokenFactory is IFactory{
         poolLv[pair] = _level;
     }
 
-    function createStaking(address _token) public returns(address staking){
+    function createLpStaking(address _token) public returns(address staking){
         staking = IStakingDeployer(stakingDeployer).LpStakingDeploy(_token);
         stakingPool[_token] = staking;
     } // 의제로만 생성가능하도록?? 일단 아무나 생성가능
+
+    function createASDstaking(address _token) public returns(address staking){
+        staking = IStakingDeployer(stakingDeployer).ASDstakingDeploy(_token);
+        stakingPool[_token] = staking;
+    }
 
     function getStakingPool(address _token) view public returns(address) {
         return stakingPool[_token];

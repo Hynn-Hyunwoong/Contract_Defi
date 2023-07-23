@@ -9,6 +9,7 @@ interface IFactory {
     function createPair(address tokenA, address tokenB) external returns (address);
     function setPoolLevel(address tokenA, address tokenB, uint _level) external;
     function createPool(address tokenA, address tokenB, uint _level) external returns (address pair);
-    function createStaking(address _token) external returns(address staking);
+    function createLpStaking(address _token) external returns(address staking);
     function getStakingPool(address _token) external returns(address);
+    function createASDstaking(address _token) external returns(address staking);
 }

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IFactory.sol";
 import "./ISwapPool.sol";
 import "./IStaking.sol";
+import "./IASDstaking.sol";
 
 contract ASDRouter {
     address public factoryAddress;
@@ -34,12 +35,30 @@ contract ASDRouter {
         ISwapPool(pair).swap(_swap, _swaped, amount, msg.sender);
     }
 
-    function getStakingAddress(address _token) public returns(address staking){
-        staking = factory.getStakingPool(_token); // _token은 lptoken이나 ASD 토큰 CA
-        if(staking == address(0)) staking = factory.createStaking(_token);
+    function getStakingAddress(address _token) public returns(address){
+        address staking = factory.getStakingPool(_token); // _token은 ASD나 vASD 토큰 CA, 보상 받는 토큰을 입력.
+        require(staking==address(0),"No Exist Staking Pool");
+        return staking;
     }
 
-    function addLpStaking(address sender, address lpToken, uint256 amount, uint256 time) public {
+    function addLpStaking(address sender, address _token, uint256 amount, uint256 time, address rewardToken) public {
+        // time은 staking 누른시점부터 4개월 8개월 12개월을 timestamp 형식으로 더한 값.
+        address staking = getStakingAddress(rewardToken);
+        IStaking(staking).addStaking(sender, _token, amount, time);
+    }
 
+    function removeLpStaking(address sender, address _token, uint256 time, address rewardToken) public {
+        address staking = getStakingAddress(rewardToken);
+        IStaking(staking).removeStaking(sender, _token, time);
+    }
+
+    function addASDTokenStaking(address sender, address asdToken, uint256 amount, uint256 time, uint256 serv, address rewardToken) public {
+        address staking = getStakingAddress(rewardToken);
+        IASDStaking(staking).addStaking(sender, asdToken, amount, time, serv);
+    }
+
+    function removeASDTokenStaking( address sender, address _token, uint256 time, address rewardToken) public {
+        address staking = getStakingAddress(rewardToken);
+        IASDStaking(staking).removeStaking(sender, _token, time);
     }
 }

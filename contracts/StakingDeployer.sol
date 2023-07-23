@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "./IStakingDeployer.sol";
 import "./Staking.sol";
+import "./ASDstaking.sol";
 
 contract StakingDeployer is IStakingDeployer{
     address public owner;
@@ -22,7 +23,9 @@ contract StakingDeployer is IStakingDeployer{
 
     function ASDstakingDeploy(address _token) public returns(address){
         require( msg.sender == owner, "No Authority");
-        // ASDstaking staking = new ASDstaking(owner, _token);
+        ASDstaking staking = new ASDstaking(owner, _token);
+
+        return address(staking);
     }
    
 }
